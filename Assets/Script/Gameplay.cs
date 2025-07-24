@@ -2,6 +2,8 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using System.Collections;
+using NUnit.Framework;
+using System.Collections.Generic;
 
 public class Gameplay : MonoBehaviour
 {
@@ -25,6 +27,10 @@ public class Gameplay : MonoBehaviour
     private int currentAttempts;
     private bool isPlayerTurn;
     private bool gameActive;
+
+    private int computerMinGuess;
+    private int computerMaxGuess;
+    private List<int> computerGuesses; // Renamed for clarity
 
     private void Awake()
     {
@@ -55,6 +61,10 @@ public class Gameplay : MonoBehaviour
         submitButton.interactable = true;
         guessInputField.Select();
         guessInputField.ActivateInputField();
+
+        computerMinGuess = minNumber;
+        computerMaxGuess = maxNumber;
+        computerGuesses = new List<int>(); // Initialize the list
     }
 
     private void OnSubmitGuess()
@@ -105,7 +115,7 @@ public class Gameplay : MonoBehaviour
             return;
         }
 
-        string hint = guess < targetNumber ? "Too Low" : "Too High";
+        string hint = guess < targetNumber ? "<sprite=\"cross\" index=116> Too Low" : "<sprite=\"cross\" index=115> Too High";
         gameLog.text += $"{hint}!\n";
 
         isPlayerTurn = !playerGuess;
@@ -116,7 +126,7 @@ public class Gameplay : MonoBehaviour
         {
             guessInputField.interactable = false;
             submitButton.interactable = false;
-            StartCoroutine(ComputerTurn());
+            StartCoroutine(ComputerTurn(guess < targetNumber));
         }
         else
         {
@@ -127,13 +137,31 @@ public class Gameplay : MonoBehaviour
         }
     }
 
-    private IEnumerator ComputerTurn()
+    private IEnumerator ComputerTurn(bool targetIsHigher)
     {
         yield return new WaitForSeconds(1.5f);
         if (!gameActive) yield break;
 
-        int computerGuess = Random.Range(minNumber, maxNumber + 1);
-        HandleGuess(computerGuess, false);
+        int lastGuess = computerGuesses.Count > 0 ? computerGuesses[computerGuesses.Count - 1] : (computerMinGuess + computerMaxGuess) / 2;
+
+        if (computerGuesses.Count > 0)
+        {
+            if (targetIsHigher)
+            {
+                computerMinGuess = lastGuess + 1;
+            }
+            else
+            {
+                computerMaxGuess = lastGuess - 1;
+            }
+        }
+
+        int compGuess = (computerMinGuess + computerMaxGuess) / 2;
+        compGuess = Mathf.Clamp(compGuess, computerMinGuess, computerMaxGuess);
+
+        computerGuesses.Add(compGuess);
+
+        HandleGuess(compGuess, false);
     }
 
     private void EndGame(string message)
